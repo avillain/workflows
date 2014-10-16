@@ -13,10 +13,14 @@
 REF_SEQ?=NC_007793.fa
 RESULTS?=./results
 R_GROUP?="@RG\tID:group1\tSM:sample1\tPL:illumina\tLB:lib1\PU:unit1"
+FILT_EXPR="DP<50 || FS > 60.0 || MQ < 40.0"
+FILT_NAME="cov50"
+FILT_INDEL="QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"
 PREF=$(subst .fa,,$(REF_SEQ))
 FQ_FILES=$(wildcard *.fastq)
 MPIL_FILES=${patsubst %.fastq,%.mpileup,$(FQ_FILES)}
 REAL_FILES=${patsubst %.fastq,%.realigned.bam,$(FQ_FILES)}
+VCF_FILES=${patsubst %.fastq,%.filtered.vcf,$(FQ_FILES)}
 
 #
 # -----------------------------------------------------------
@@ -31,7 +35,7 @@ NO_OUTPUT= "2>/dev/null || true"
 COL_ON = \033[0;32m
 COL_OFF = \033[m
 
-all: $(MPIL_FILES) $(REAL_FILES)
+all: $(MPIL_FILES) $(VCF_FILES)
 
 # Preprocessing
 $(RESULTS):
@@ -82,29 +86,41 @@ $(PREF).dict: $(REF_SEQ)
 %.realigned.bam: %.dedup.bam %.list $(REF_SEQ)
 	@GenomeAnalysisTK -T IndelRealigner -R $(REF_SEQ) -I $< -targetIntervals $(word 2,$^) -o $@
 
-#GenomeAnalysisTK -T UnifiedGenotyper -R $refgenome -I $realignedbam -ploidy 1 -glm BOTH -stand_call_conf 10 -stand_emit_conf 5 -o $rawvariants
+%.raw.vcf: %.realigned.bam $(REF_SEQ)
+	@GenomeAnalysisTK -T UnifiedGenotyper -R $(REF_SEQ) -I $< -ploidy 1 -glm BOTH -stand_call_conf 10 -stand_emit_conf 5 -o $@
 
-#GenomeAnalysisTK -T SelectVariants -R $refgenome -V $rawvariants -selectType SNP -o $rawsnps
-#filtexpr="DP<$res || FS > 60.0 || MQ < 40.0"
-#GenomeAnalysisTK -T VariantFiltration -R $refgenome -V $rawsnps --filterExpression "$filtexpr" --filterName $filtname -o $filteredsnps
+%.raw.snp.vcf: %.raw.vcf $(REF_SEQ)
+	@GenomeAnalysisTK -T SelectVariants -R $(REF_SEQ) -V $< -selectType SNP -o $@
 
-#GenomeAnalysisTK -T SelectVariants -R $refgenome --variant $filteredsnps -select "vc.isNotFiltered()" --out $filteredcovsnps
+%.filtering.snp.vcf: %.raw.snp.vcf $(REF_SEQ)
+	@GenomeAnalysisTK -T VariantFiltration -R $(REF_SEQ) -V $< --filterExpression $(FILT_EXPR) --filterName $(FILT_NAME) -o $@
 
-#grep '#' "$filteredcovsnps" > "$filteredhetsnps" # header
-#grep -v '#' "$filteredcovsnps" | awk '{split($10,geno,":");split(geno[2],ad,","); if(ad[1]*100/(ad[1]+ad[2])<5) print $0}' >> "$filteredhetsnps" # filter on sample/genotype field : 95% of reads must give the same information (e.g. 134 A and 67 T isn't a SNP)
+%.filtered_1.snp.vcf: %.filtering.snp.vcf $(REF_SEQ)
+	@GenomeAnalysisTK -T SelectVariants -R $(REF_SEQ) --variant $< -select "vc.isNotFiltered()" --out $@
 
-#filtindel="QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"
-#GenomeAnalysisTK -T SelectVariants -R $refgenome -V $rawvariants -selectType INDEL -o $rawindels
-#GenomeAnalysisTK -T VariantFiltration -R $refgenome -V $rawindels --filterExpression "$filtindel" --filterName "base" -o $filteredindels
+%.filtered_2.snp.vcf: %.filtered_1.snp.vcf 
+	@grep '#' $< > $@ # header
+	@grep -v '#' $< | awk '{split($$10,geno,":");split(geno[2],ad,","); if(ad[1]*100/(ad[1]+ad[2])<5) print $$0}' >> $@
 
+%.raw.indel.vcf: %.raw.vcf $(REF_SEQ)
+	@GenomeAnalysisTK -T SelectVariants -R $(REF_SEQ) -V $< -selectType INDEL -o $@
 
+%.filtering.indel.vcf: %.raw.indel.vcf $(REF_SEQ)
+	@GenomeAnalysisTK -T VariantFiltration -R $(REF_SEQ) -V $< --filterExpression $(FILT_INDEL) --filterName "base" -o $@
 
+%.filtered.indel.vcf: %.filtering.indel.vcf $(REF_SEQ)
+	@GenomeAnalysisTK -T SelectVariants -R $(REF_SEQ) --variant $< -select "vc.isNotFiltered()" --out $@
+
+%.filtered.vcf: %.raw.vcf %.filtered_2.snp.vcf %.filtered.indel.vcf
+	@grep '#' $< > $@
+	@grep -v '#' $(word 2,$^) $(word 3,$^) |sort -k2n,2 >> $@
+	
 
 
 # Others
 
 clean:
-	@rm -fr *.mpileup *.list *.dict *.metrics *.stats *.bai *.bam *.sam *.fai *.pac *.ann *.amb *.sa *.bwt
+	@rm -fr *.vcf *.vcf.idx *.mpileup *.list *.dict *.metrics *.stats *.bai *.bam *.sam *.fai *.pac *.ann *.amb *.sa *.bwt
 
 print-%:
 	@echo "[ $* ] : $($*)"
