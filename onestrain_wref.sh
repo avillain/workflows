@@ -176,16 +176,19 @@ fi
 if [[ -z $NOQC ]]
 then
      INQC=$RESULTS"/"$(basename ${INPUT%.*}"_clean.fastq")
-     echo "[info] performing quality control using fqCleaner"
-     echo '[cmd] fqCleaner.sh -f $INPUT -x $INQC -s "QFAD"'
-     fqCleaner.sh -f $INPUT -x $INQC -s "QFAD" || exit 1
-     INPUT=$INQC
-     if [[ ! -z $INPUTMATE ]]
+     if [[ -z $INPUTMATE ]]
      then
-          INQCMATE=$RESULTS"/"$(basename ${INPUTMATE%.*})"_clean.fastq"
-          echo "[cmd] fqCleaner.sh -f "$INPUTMATE" -x "$INQCMATE" -s QFAD"
-          fqCleaner.sh -f $INPUTMATE -x $INQCMATE -s "QFAD" || exit 1
+          echo "[info] performing single-end quality control using fqCleaner"
+          echo '[cmd] fqCleaner.sh -f $INPUT -x $INQC -s "QFAD"'
+          fqCleaner.sh -f $INPUT -x $INQC -s "QFAD" || exit 1
+     else
+	  INQCMATE=$RESULTS"/"$(basename ${INPUTMATE%.*})"_clean.fastq"
+          echo "[info] performing paired-end quality control using fqCleaner"
+          echo "[cmd] fqCleaner.sh -f $INPUT -r $INPUTMATE -x $INQX -y $INQCMATE -s "QFAD""
+          fqCleaner.sh -f $INPUT -r $INPUTMATE -x $INQX -y $INQCMATE -s "QFAD" || exit 1
      fi
+     INPUT=$INQC
+     INPUTMATE=$INQCMATE
 fi
 
 if [[ ! -z $INPUTMATE ]]
