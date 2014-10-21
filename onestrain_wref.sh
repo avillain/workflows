@@ -185,7 +185,7 @@ then
 	  INQCMATE=$RESULTS"/"$(basename ${INPUTMATE%.*})"_clean.fastq"
           echo "[info] performing paired-end quality control using fqCleaner"
           echo "[cmd] fqCleaner.sh -f $INPUT -r $INPUTMATE -x $INQX -y $INQCMATE -s "QFAD""
-          fqCleaner.sh -f $INPUT -r $INPUTMATE -x $INQX -y $INQCMATE -s "QFAD" || exit 1
+          fqCleaner.sh -f $INPUT -r $INPUTMATE -x $INQC -y $INQCMATE -s "QFAD" || exit 1
      fi
      INPUT=$INQC
      INPUTMATE=$INQCMATE
