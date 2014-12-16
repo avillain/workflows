@@ -7,20 +7,26 @@
 # Variables
 #
 
+
+#.INTERMEDIATE : %.sam %.unsorted.bam
 .SECONDARY:
 .SILENT:
 
-REF_SEQ?=NC_007793.fa
-RESULTS?=./results
+REF_SEQ?=/pasteur/projets/specific/PFBAG_ngs/Projets/Adrien-V/makefiles/data/NC_007793.fa
+INDIR?=/pasteur/projets/specific/PFBAG_ngs/Projets/Adrien-V/makefiles/data
+RESULTS?=/pasteur/projets/specific/PFBAG_ngs/Projets/Adrien-V/makefiles/results
+#TMP?=/pasteur/projets/specific/PFBAG_ngs/Projets/Adrien-V/makefiles/tmp
 R_GROUP?="@RG\tID:group1\tSM:sample1\tPL:illumina\tLB:lib1\PU:unit1"
 FILT_EXPR="DP<50 || FS > 60.0 || MQ < 40.0"
 FILT_NAME="cov50"
 FILT_INDEL="QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"
 PREF=$(subst .fa,,$(REF_SEQ))
-FQ_FILES=$(wildcard *.fastq)
-MPIL_FILES=${patsubst %.fastq,%.mpileup,$(FQ_FILES)}
-REAL_FILES=${patsubst %.fastq,%.realigned.bam,$(FQ_FILES)}
-VCF_FILES=${patsubst %.fastq,%.filtered.vcf,$(FQ_FILES)}
+FQ_FILES=$(wildcard $(INDIR)/*.fastq)
+#FQ_FILES=$(wildcard *.fastq)
+SAM_FILES=${patsubst %.fastq,$(RESULTS)/%.sam,$(notdir $(FQ_FILES))}
+MPIL_FILES=${patsubst %.fastq,$(RESULTS)/%.mpileup,$(notdir $(FQ_FILES))}
+REAL_FILES=${patsubst %.fastq,$(RESULTS)/%.realigned.bam,$(notdir $(FQ_FILES))}
+VCF_FILES=${patsubst %.fastq,$(RESULTS)/%.filtered.vcf,$(notdir $(FQ_FILES))}
 
 #
 # -----------------------------------------------------------
@@ -35,10 +41,15 @@ NO_OUTPUT= "2>/dev/null || true"
 COL_ON = \033[0;32m
 COL_OFF = \033[m
 
-all: $(MPIL_FILES) $(VCF_FILES)
+#all: $(MPIL_FILES) $(VCF_FILES)
+
+all: $(SAM_FILES)
 
 # Preprocessing
 $(RESULTS):
+	mkdir -p $@
+
+$(TMP):
 	mkdir -p $@
 
 %.fa.fai: %.fa
@@ -115,12 +126,12 @@ $(PREF).dict: $(REF_SEQ)
 	@grep '#' $< > $@
 	@grep -v '#' $(word 2,$^) $(word 3,$^) |sort -k2n,2 >> $@
 	
-
+%.annotated.vcf: %.filtered.vcf 
 
 # Others
 
 clean:
-	@rm -fr *.vcf *.vcf.idx *.mpileup *.list *.dict *.metrics *.stats *.bai *.bam *.sam *.fai *.pac *.ann *.amb *.sa *.bwt
+	@rm -fr *clean.fastq *.vcf *.vcf.idx *.mpileup *.list *.dict *.metrics *.stats *.bai *.bam *.sam *.fai *.pac *.ann *.amb *.sa *.bwt
 
 print-%:
 	@echo "[ $* ] : $($*)"

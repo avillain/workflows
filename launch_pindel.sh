@@ -22,6 +22,9 @@ module load snpEff/3.5
 # PRECONFIGURATION #
 ####################
 
+
+#### $1 : samfile.sam $2 : reference.fa $3 : compare.vcf.gz $4 : snpeff.config $5 : comparepindel.vcf.gz
+
 #directories
 TMP="./tmp"
 RESULTS="./results"
@@ -46,6 +49,7 @@ reference=$TMP"/"`basename $2`
 refindex=$reference.fai
 compare=$RESULTS"/"`basename $3`
 
+compindel=$5
 cp $2 $reference
 cp $3 $compare
 
@@ -54,7 +58,7 @@ insertfile=$TMP"/"$prefix"_insertsize.txt"
 
 if [ ! -f $insertfile ]
 then
-    $HOME/scripts/getinsertsize.py $1 > $insertfile
+    getinsertsize.py $1 > $insertfile
 fi
 
 insertmean=`grep -o -P "span: mean ([0-9]+)" $insertfile | cut -d " " -f 3`
@@ -93,7 +97,15 @@ pindelconfigfile=$TMP"/""pindel$prefix.config"
 pindout=$TMP"/"$prefix"_D"
 pindvcf=$TMP"/"$prefix"_pindel.vcf"
 pindvcf_filt=$RESULTS"/"$prefix"_pindel_filtered.vcf"
+pindelsubtracted=$RESULTS"/"$prefix"_pindel_subtracted.vcf"
+pindvcf0=$RESULTS"/"$prefix"_pindel_filt0.vcf"
+pindvcf25=$RESULTS"/"$prefix"_pindel_filt25.vcf"
+pindvcf50=$RESULTS"/"$prefix"_pindel_filt50.vcf"
+pindvcf100=$RESULTS"/"$prefix"_pindel_filt100.vcf"
+
 pindel8cols=$RESULTS"/"$prefix"_pindel_filtered_8cols.vcf"
+
+
 
 #configuration
 echo -e "$sortedbamfile\t$insertmean\t$prefix" > $pindelconfigfile
@@ -106,10 +118,48 @@ pindel2vcf -p $pindout -r $reference -R spombe -d 09052011 -v $pindvcf
 
 #filtering
 grep "#" $pindvcf > $pindvcf_filt
-awk '!/^#.*/ {split($10,tab,","); if(tab[2]>=5) print $0}' $pindvcf >> $pindvcf_filt
+awk '!/^#.*/ {split($10,tab,","); if(tab[2]>=10) print $0}' $pindvcf >> $pindvcf_filt
 
 grep "^##" $pindvcf_filt > $pindel8cols
 awk 'BEGIN {OFS = "\t"} !/^##.*/ { print $1, $2, $3, $4, $5, $6, $7, $8 }' $pindvcf_filt >> $pindel8cols
+
+#subtraction
+compindelname=`basename $compindel`
+compindelgz=$compindel.gz
+pindvcf_filtgz=$pindvcf_filt.gz
+
+if [ ! -f $pindelvcf_filtgz ]
+then
+    bgzip $pindelvcf_filt
+fi
+
+tabix -f -p vcf $pindelvcf_filtgz
+
+
+if test ${compindel##*.} != 'gz'
+then
+    bgzip $compindel
+    comp2=$compindel.gz
+    compindel=$comp2
+fi
+
+tabix -f -p vcf $compindel
+
+vcf-isec -f -c $pindelfvcf_filtgz $compindel > $pindelsubtracted
+
+# division in subclasses
+grep "#" $pindelsubtracted > $pindvcf0
+awk 'BEGIN {OFS = "\t"} !/^#.*/ {split($10,geno,":");split(geno[2],ad,","); if(ad[2]>=10 && ad[2]*100/(ad[1]+ad[2])<=15) print $0}' $pindelsubtracted >> $pindvcf0
+
+grep "#" $pindelsubtracted > $pindvcf25
+awk 'BEGIN {OFS = "\t"} !/^#.*/ {split($10,geno,":");split(geno[2],ad,","); if(ad[2]>=10 && ad[2]*100/(ad[1]+ad[2])>15 && ad[2]*100/(ad[1]+ad[2])<=35) print $0}' $pindelsubtracted >> $pindvcf25
+
+grep "#" $pindelsubtracted > $pindvcf50
+awk 'BEGIN {OFS = "\t"} !/^#.*/ {split($10,geno,":");split(geno[2],ad,","); if(ad[2]>=10 && ad[2]*100/(ad[1]+ad[2])>35 && ad[2]*100/(ad[1]+ad[2])<=65) print $0}' $pindelsubtracted >> $pindvcf50
+
+grep "#" $pindelsubtracted > $pindvcf100
+awk 'BEGIN {OFS = "\t"} !/^#.*/ {split($10,geno,":");split(geno[2],ad,","); if(ad[2]>=10 && ad[2]*100/(ad[1]+ad[2])>65) print $0}' $pindelsubtracted >> $pindvcf100
+
 
 ### SOAPindel
 
@@ -123,15 +173,19 @@ searchprefix=$prefix
 #searchprefix="1623-1"
 
 #configuration
-ls /pasteur/projets/NGS-Dyngen/fastq_files/raw_files/*/*$searchprefix*.fastq > $readslist
+ls /pasteur/projets/NGS-Dyngen/fastq_files/clean_files/*$searchprefix*.fastq > $readslist
 echo -e "$sortedbamfile\t$insertmean\t$insertsd\t$readslength\tPAIR" > $mappinglist
 
 #detection
 indel_detection.ibam.pl $mappinglist $reference $readslist -wd $TMP
 
 #merging chromosomes files
-grep "#" $TMP/result/*chr1*/*indel.vcf > $soapvcf
+grep "#" $TMP/result/I:*/*indel.vcf > $soapvcf
 grep -hv "#" $TMP/result/*/*indel.vcf >> $soapvcf
+
+sed -i "s/chrI/I/g" $soapvcf
+sed -i "s/chrII/II/g" $soapvcf
+sed -i "s/chrMT/MT/g" $soapvcf
 
 #filtering
 grep "##" $soapvcf > $soapvcf_filt
@@ -148,13 +202,14 @@ refdir=$reference".DB.SPLIT/*"
 prism8cols=$RESULTS"/"$prefix"_prism_filtered_8cols.vcf"
 
 #detection
-for i in $refdir; do chrname=`basename ${i%.*}`; j=$TMP"/"$prefix"_"$chrname".sam"; grep "SN:$chrname" $1 > $j; head -n 7 $1 | tail -n 1 >> $j; grep -P "\t$chrname\t" $1 >> $j; run_PRISM.sh -m $insertmean -e $insertsd -r $i -i $j -I $TMP -O $TMP"/"$chrname; done
+#for i in $refdir; do v=`basename ${i%.*}`; chrname=${v#chr}; j=$TMP"/"$prefix"_"$chrname".sam"; samtools view -h $sortedbamfile $chrname > $j; run_PRISM.sh -m $insertmean -e $insertsd -r $i -i $j -I $TMP -O $TMP"/"$chrname; done
+for i in $refdir; do chrname=`basename ${i%.*}`; run_PRISM.sh -m $insertmean -e $insertsd -r $i -i $1 -I $TMP -O $TMP"/"$chrname; done
 
 #filtering
 for i in $refdir; do chrname=`basename ${i%.*}`; awk '{ if ($6>=5) print $0 }' $TMP"/"$chrname"/split_all.sam_ns_rmmul_cigar_sorted_sv" > $TMP"/"$chrname"/split_all.sam_ns_rmmul_cigar_sorted_sv_supported"; done
 
 #conversion
-for i in $refdir; do chrname=`basename ${i%.*}`; out=$TMP"/"$prefix"_"$chrname"_prism.vcf"; prism2vcf.py -f $TMP"/"$chrname"/split_all.sam_ns_rmmul_cigar_sorted_sv_supported" -o $out; done
+for i in $refdir; do chrname=`basename ${i%.*}`; out=$TMP"/"$prefix"_"$chrname"_prism.vcf"; prism2vcf.py $TMP"/"$chrname"/split_all.sam_ns_rmmul_cigar_sorted_sv_supported" $reference $out; done
 cat $TMP"/"*prism.vcf > $prismvcf_filt
 
 echo -e "##fileformat=VCFv4.0\n###fileDate=20140724\n###source=prism\n###reference=/pasteur/projets/NGS-Dyngen/large_indels/test/J64-G15/./tmp/pombe_09052011.fasta.DB.SPLIT\n###INFO=<ID=PROGRAM,Number=1,Type=String,Description="Total number of reads in haplotype window">\n###INFO=<ID=SVTYPE,Number=1,Type=String,Description="Total number of reads 2 in haplotype window">\n###INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Left flank length and right flank length">\n###FILTER=<ID=q10,Description="Quality below 10">\n###FILTER=<ID=hp10,Description="Reference homopolymer length was longer than 10">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" > $prism8cols
@@ -168,37 +223,39 @@ pindgz=$pindel8cols.gz
 soapgz=$soap8cols.gz
 prismgz=$prism8cols.gz
 union=$RESULTS"/"$prefix"_pindel_soap_prism_union.vcf"
-comparegz=$compare.gz
-uniongz=$union.gz
-compname=`basename $compare`
+compname=`basename $compare .vcf`
 minus=$RESULTS"/"$prefix"_pindel_soap_prism_minus_"${compname%.*}".vcf"
 
 bgzip $pindel8cols
 bgzip $soap8cols
 bgzip $prism8cols
-tabix -p vcf $pindgz
-tabix -p vcf $soapgz
-tabix -p vcf $prismgz
+tabix -f -p vcf $pindgz
+tabix -f -p vcf $soapgz
+tabix -f -p vcf $prismgz
 
 #combinaison des outils
 vcf-isec -a -n +1 $pindgz $soapgz $prismgz > $union
 
-if [ ! -f $uniongz ]
+if test ${union##*.} != 'gz'
 then
     bgzip $union
+    un3=$union.gz
+    union=$un3
 fi
 
-tabix -f -p vcf $uniongz
+tabix -f -p vcf $union
 
-if [ ! -f $comparegz ]
+if test ${compare##*.} != 'gz'
 then
     bgzip $compare
+    comp3=$compare.gz
+    compare=$comp3
 fi
 
-tabix -f -p vcf $comparegz
+tabix -f -p vcf $compare
 
 #comparaison vs témoin
-vcf-isec -c $uniongz $comparegz > $minus
+vcf-isec -c $union $compare > $minus
 
 ##############
 # ANNOTATION #

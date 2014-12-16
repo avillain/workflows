@@ -180,12 +180,12 @@ then
      then
           echo "[info] performing single-end quality control using fqCleaner"
           echo '[cmd] fqCleaner.sh -f $INPUT -x $INQC -s "QFAD"'
-          fqCleaner.sh -f $INPUT -x $INQC -s "QFAD" || exit 1
+          fqCleaner.sh -f $INPUT -x $INQC -s "QFAD" -l 80 -q 30 || exit 1
      else
 	  INQCMATE=$RESULTS"/"$(basename ${INPUTMATE%.*})"_clean.fastq"
           echo "[info] performing paired-end quality control using fqCleaner"
-          echo "[cmd] fqCleaner.sh -f $INPUT -r $INPUTMATE -x $INQX -y $INQCMATE -s "QFAD""
-          fqCleaner.sh -f $INPUT -r $INPUTMATE -x $INQC -y $INQCMATE -s "QFAD" || exit 1
+          echo "[cmd] fqCleaner.sh -f $INPUT -r $INPUTMATE -x $INQC -y $INQCMATE -s "QFAD" -l 80 -q 30 "
+          fqCleaner.sh -f $INPUT -r $INPUTMATE -x $INQC -y $INQCMATE -s "QFAD" -l 80 -q 30 || exit 1
      fi
      INPUT=$INQC
      INPUTMATE=$INQCMATE
@@ -238,10 +238,10 @@ covplot=$TMP"/"$PREFIX"_coverage.jpeg"
 
 #adjust coverage limit for snp filtering
 echo "[info] adjusting coverage limit for snp filtering"
-echo '[cmd] samtools mpileup $realignedbam > $pileup'
+echo '[cmd] samtools mpileup -f $refgenome $realignedbam > $pileup'
 #echo '[cmd] cov=`awk '{ total += $4;count++ } END {print total/count}' $pileup`'
 #echo '[cmd] res=$(echo "$cov / 2" |bc )'
-samtools mpileup $realignedbam > $pileup 
+samtools mpileup -f $refgenome $realignedbam > $pileup 
 cov=`awk '{ total += $4;count++ } END {print total/count}' $pileup`
 res=$(echo "$cov / 2" |bc )
 
