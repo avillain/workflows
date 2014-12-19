@@ -200,11 +200,6 @@ else
      bwa mem -M -R $readgroup $RESULTS"/"$REFNAME $INPUT > $outputsam || exit 1
 fi
 
-#Mapping
-echo "[info] mapping reads on reference genome"
-echo '[cmd] bwa mem -M -R $readgroup $RESULTS"/"$REFNAME $INPUT > $outputsam'
-bwa mem -M -R $readgroup $RESULTS"/"$REFNAME $INPUT > $outputsam 
-
 #Sam to Bam
 echo '[cmd] FixMateInformation INPUT=$outputsam OUTPUT=$fixedsam'
 FixMateInformation INPUT=$outputsam OUTPUT=$fixedsam
