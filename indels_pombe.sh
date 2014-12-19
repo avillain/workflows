@@ -159,7 +159,7 @@ echo -e "$sortedbamfile\t$insertmean\t$insertsd\t$readslength\tPAIR" > $mappingl
 indel_detection.ibam.pl $mappinglist $reference $readslist -wd $TMP
 
 #merging chromosomes files
-grep "#" $TMP/result/chr1:*/*indel.vcf > $soapvcf
+grep "#" $TMP/result/I\:*/*indel.vcf > $soapvcf
 grep -hv "#" $TMP/result/*/*indel.vcf >> $soapvcf
 
 #filtering

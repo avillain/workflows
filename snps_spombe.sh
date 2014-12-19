@@ -268,14 +268,12 @@ rawsnps=$TMP"/"$PREFIX"_snps_raw.vcf"
 filtexpr="DP<$res || FS > 60.0 || MQ < 40.0"
 filtname="cov"$res
 filteredsnps=$TMP"/"$PREFIX"snps_cov"$res".vcf"
-filteredcovsnps=$TMP"/"$PREFIX"snps_cov"$res"selected.vcf"
+#filteredcovsnps=$TMP"/"$PREFIX"snps_cov"$res"selected.vcf"
 filteredhetall=$TMP"/"$PREFIX"snpsall_filtered.vcf"
 filteredhetsnps=$RESULTS"/"$PREFIX"snps_filtered.vcf"
 
 echo "[info] filtering SNPs using expression $filtexpr"
-echo '[cmd] GenomeAnalysisTK -T SelectVariants -R $refgenome -V $rawvariants -selectType SNP -o $rawsnps' 
-GenomeAnalysisTK -T VariantFiltration -R $refgenome -V $rawsnps --filterExpression "$filtexpr" --filterName $filtname -o $filteredsnps 
-GenomeAnalysisTK -T SelectVariants -R $refgenome --variant $filteredsnps -select "vc.isNotFiltered()" --out $filteredcovsnps
+echo '[cmd] GenomeAnalysisTK -T SelectVariants -R $refgenome -V $rawvariants -selectType SNP -o $rawsnps'
 
 GenomeAnalysisTK -T SelectVariants -R $refgenome -V $rawvariants -selectType SNP -o $rawsnps 
 GenomeAnalysisTK -T VariantFiltration -R $refgenome -V $rawsnps --filterExpression "$filtexpr" --filterName $filtname -o $filteredsnps 
@@ -284,10 +282,10 @@ GenomeAnalysisTK -T SelectVariants -R $refgenome --variant $filteredsnps -select
 grep "#" $filteredhetall > $filteredhetsnps
 awk '/^I.*/ { if (($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' $filteredhetall >> $filteredhetsnps
 
-echo '[cmd] grep "#" "$filteredcovsnps" > "$filteredhetsnps"'
-echo "[cmd] grep -v \"#\" $filteredcovsnps | awk '{split($10,geno,":");split(geno[2],ad,\",\"); if(ad[1]*100/(ad[1]+ad[2])<5) print $0}' >> \"$filteredhetsnps\""
-grep '#' "$filteredcovsnps" > "$filteredhetsnps" # header
-grep -v '#' "$filteredcovsnps" | awk '{split($10,geno,":");split(geno[2],ad,","); if(ad[1]*100/(ad[1]+ad[2])<5) print $0}' >> "$filteredhetsnps" # filter on sample/genotype field : 95% of reads must give the same information (e.g. 134 A and 67 T isn't a SNP)
+#echo '[cmd] grep "#" "$filteredhetsnps" > "$filteredhetsnps"'
+#echo "[cmd] grep -v \"#\" $filteredcovsnps | awk '{split($10,geno,":");split(geno[2],ad,\",\"); if(ad[1]*100/(ad[1]+ad[2])<5) print $0}' >> \"$filteredhetsnps\""
+#grep '#' "$filteredcovsnps" > "$filteredhetsnps" # header
+#grep -v '#' "$filteredcovsnps" | awk '{split($10,geno,":");split(geno[2],ad,","); if(ad[1]*100/(ad[1]+ad[2])<5) print $0}' >> "$filteredhetsnps" # filter on sample/genotype field : 95% of reads must give the same information (e.g. 134 A and 67 T isn't a SNP)
 
 ###Indels
 rawindels=$TMP"/"$PREFIX"_indels_raw.vcf"
