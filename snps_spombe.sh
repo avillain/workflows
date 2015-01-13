@@ -17,6 +17,7 @@ OPTIONS:
    -a      Annotation of variants with SnpEff (see -c and -d options)
    -c	   SnpEff config file (mandatory if -a)
    -d      SnpEff database ID of the species  (mandatory if -a)
+   -s	   Subtract SNPs and indels also found in control
    -v      Verbose
 
 EXAMPLE:
@@ -32,7 +33,8 @@ NOQC=
 ANNOT=
 CONF=
 ID=
-while getopts “hi:j:r:o:p:c:d:vna” OPTION
+SUB=
+while getopts “hi:j:r:o:p:c:d:vnas” OPTION
 do
      case $OPTION in
          h)
@@ -66,6 +68,9 @@ do
          a)
              ANNOT=1
              ;;
+	 s)
+	     SUB=1
+	     ;;
          ?)
              usage
              exit
@@ -295,23 +300,31 @@ GenomeAnalysisTK -T SelectVariants -R $refgenome --variant $filteredindels_tmp -
 grep "#" $filteredallindels > $filteredindels
 awk '/^I.*/ { if (($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' $filteredallindels >> $filteredindels
 
-snpminus=$RESULTS"/"$PREFIX"snps_minus_union1623.vcf"
-indelminus=$RESULTS"/"$PREFIX"indels_minus_union1623.vcf"
-
-bgzip $filteredhetsnps
-tabix -p vcf $filteredhetsnps.gz
-vcf-isec -c $filteredhetsnps.gz /pasteur/projets/NGS-Dyngen/snps/PB1623/union/PB1623snps_raw.vcf.gz > $snpminus
-gunzip $filteredhetsnps.gz
-rm $filteredhetsnps.gz.tbi
-
-bgzip $filteredindels
-tabix -p vcf $filteredindels.gz
-vcf-isec -c $filteredindels.gz /pasteur/projets/NGS-Dyngen/snps/PB1623/union/PB1623indels_raw.vcf.gz > $indelminus
-gunzip $filteredindels.gz
-rm $filteredindels.gz.tbi
-
-allvariants=$RESULTS"/"$PREFIX"allvariants_filtered_minus_union1623.vcf"
-tmpvar=$TMP"/allvariants_minus1623_tmp.vcf"
+if [[ ! -z $SUB ]]
+then
+	echo "[info] substracting control SNPs and indels from results"
+	snpminus=$RESULTS"/"$PREFIX"snps_minus_union1623.vcf"
+	indelminus=$RESULTS"/"$PREFIX"indels_minus_union1623.vcf"
+	bgzip $filteredhetsnps
+	tabix -p vcf $filteredhetsnps.gz
+	vcf-isec -c $filteredhetsnps.gz /projets/NGS-Dyngen/snps/PB1623/union/PB1623snps_raw.vcf.gz > $snpminus
+	gunzip $filteredhetsnps.gz
+	rm $filteredhetsnps.gz.tbi
+	bgzip $filteredindels
+	tabix -p vcf $filteredindels.gz
+	vcf-isec -c $filteredindels.gz /pasteur/projets/NGS-Dyngen/snps/PB1623/union/PB1623indels_raw.vcf.gz > $indelminus
+	gunzip $filteredindels.gz
+	rm $filteredindels.gz.tbi
+	allvariants=$RESULTS"/"$PREFIX"allvariants_filtered_minus_union1623.vcf"
+	tmpvar=$TMP"/allvariants_minus1623_tmp.vcf"
+	snpeffannotated=$RESULTS"/"$PREFIX"allvariants_annotated_minus_union1623.vcf"
+else
+	snpminus=$filteredhetsnps
+	indelminus=$filteredindels
+	allvariants=$RESULTS"/"$PREFIX"allvariants_filtered.vcf"
+	tmpvar=$TMP"/allvariants.vcf"
+	snpeffannotated=$RESULTS"/"$PREFIX"allvariants_annotated.vcf"
+fi
 
 echo "[info] merging snps and indels in the same .vcf file"
 grep -v '#' $snpminus > $tmpvar
@@ -333,7 +346,6 @@ then
         echo "[info] annotation using snpEff : config file $CONF and ref ID $ID"
         #snps
         snpeffannotation=$TMP"/"$PREFIX"_effects.vcf"
-        snpeffannotated=$RESULTS"/"$PREFIX"allvariants_annotated_minus_union1623.vcf"
         snpstats=$TMP"/"$PREFIX"annot"
         echo "[cmd] snpEff -c $configfile -v -s $snpstats -o gatk $refID $allvariants > $snpeffannotation"
         snpEff -c $configfile -v -s $snpstats -o gatk $refID $allvariants > $snpeffannotation

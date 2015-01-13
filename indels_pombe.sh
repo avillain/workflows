@@ -162,6 +162,9 @@ indel_detection.ibam.pl $mappinglist $reference $readslist -wd $TMP
 grep "#" $TMP/result/I\:*/*indel.vcf > $soapvcf
 grep -hv "#" $TMP/result/*/*indel.vcf >> $soapvcf
 
+sed -i "s/^chr//g" $soapvcf
+
+
 #filtering
 grep "##" $soapvcf > $soapvcf_filt
 grep "#CHR" $soapvcf >> $soapvcf_filt
@@ -190,12 +193,9 @@ for i in $refdir; do chrname=`basename ${i%.*}`; awk '{ if ($6>=5) print $0 }' $
 
 #conversion
 for i in $refdir; do chrname=`basename ${i%.*}`; out=$TMP"/"$prefix"_"$chrname"_prism.vcf"; prism2vcf.py $TMP"/"$chrname"/split_all.sam_ns_rmmul_cigar_sorted_sv_supported" $reference $out; done
-cat $TMP"/"*prism.vcf > $prismvcf
+cat $TMP"/"*prism.vcf | awk '{printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",$1, $2, $3, $4, $5, $6, $7, $8)}' > $prismvcf
 
 echo -e "##fileformat=VCFv4.0\n####fileDate=20140724\n####source=prism\n##INFO=<ID=DP,Number=1,Type=Integer,Description="Total number of reads in haplotype window">\n##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">\n##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">\n###ALT=<ID=ALTER,Description="Alter">\n###FILTER=<ID=q10,Description="Quality below 10">\n###FILTER=<ID=hp10,Description="Reference homopolymer length was longer than 10">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" > $prismvcf_filt
-
-
-#echo -e "##fileformat=VCFv4.0\n###fileDate=20140724\n###source=prism\n###reference=/pasteur/projets/NGS-Dyngen/large_indels/test/J64-G15/./tmp/pombe_09052011.fasta.DB.SPLIT\n###INFO=<ID=PROGRAM,Number=1,Type=String,Description="Total number of reads in haplotype window">\n###INFO=<ID=SVTYPE,Number=1,Type=String,Description="Total number of reads 2 in haplotype window">\n###INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Left flank length and right flank length">\n###FILTER=<ID=q10,Description="Quality below 10">\n###FILTER=<ID=hp10,Description="Reference homopolymer length was longer than 10">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" > $prismvcf_filt
 
 awk '/^I.*/ {split($8,geno,";");split(geno[1],ad,"="); if (ad[2]<25 || ($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' $prismvcf >> $prismvcf_filt
 
@@ -207,14 +207,17 @@ vcf-isec -f -c $prismvcf_filtgz $7 > $prismsubtracted
 gunzip $prismvcf_filtgz
 rm $prismvcf_filtgz.tbi
 
-
 ###############
 # COMPARAISON #
 ###############
 
+fusion=$RESULTS"/"$prefix"_pindel_soap_prism_fusionPB1623.vcf"
 minus=$RESULTS"/"$prefix"_pindel_soap_prism_minusPB1623.vcf"
+mpil="/pasteur/projets/NGS-Dyngen/snps/PB1623/G21-1623-1/tmp/G21-1623-1.mpileup"
 
-joinx vcf-merge -e -s $pindelsubtracted $soapsubtracted $prismsubtracted > $minus
+#joinx vcf-merge -e -s $pindelsubtracted $soapsubtracted $prismsubtracted > $minus
+combinevcf.py $pindelsubtracted $soapsubtracted $prismsubtracted $mpil $fusion > $minus
+
 
 ##############
 # ANNOTATION #
