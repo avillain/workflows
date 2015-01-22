@@ -23,7 +23,7 @@ module load snpEff/3.5
 
 #qsub script.sh file.sam reference.fa unionPB1623.vcf snpEff.config PB1623_pindel.vcf.gz PB1623_soap.vcf.gz PB1623_prism.vcf.gz
 
-#### $1 : samfile.sam $2 : reference.fa $3 : compare.vcf.gz $4 : snpeff.config $5 : comparepindel.vcf.gz $6 : comparesoap.vcf.gz compareprism.vcf.gz
+#### $1 : samfile.sam $2 : reference.fa $3 : snpeff.config $4 : comparepindel.vcf.gz $5 : comparesoap.vcf.gz  6 : compareprism.vcf.gz
 
 #directories
 TMP="./tmp"
@@ -49,9 +49,11 @@ reference=$TMP"/"`basename $2`
 refindex=$reference.fai
 compare=$TMP"/"`basename $3`
 
-compindel=$5
+comparepindel=$4
+comparesoap=$5
+compareprism=$6
+
 cp $2 $reference
-ln $3 $compare
 
 #insert size
 insertfile=$TMP"/"$prefix"_insertsize.txt"
@@ -96,8 +98,9 @@ fi
 pindelconfigfile=$TMP"/""pindel$prefix.config"
 pindout=$TMP"/"$prefix"_D"
 pindvcf=$TMP"/"$prefix"_pindel.vcf"
-pindvcf_filt=$RESULTS"/"$prefix"_pindel_filtered.vcf"
-pindvcf_filtgz=$pindvcf_filt.gz
+#pindvcf_filt=$RESULTS"/"$prefix"_pindel_filtered.vcf"
+#pindvcf_filtgz=$pindvcf_filt.gz
+pindvcfgz=$pindvcf.gz
 pindelsubtracted=$RESULTS"/"$prefix"_pindel_subtracted.vcf"
 pindvcf0=$RESULTS"/"$prefix"_pindel_filt0.vcf"
 pindvcf25=$RESULTS"/"$prefix"_pindel_filt25.vcf"
@@ -114,18 +117,23 @@ pindel -f $reference -i $pindelconfigfile -c ALL -o $TMP"/"$prefix
 pindel2vcf -p $pindout -r $reference -R spombe -d 09052011 -v $pindvcf
 
 #filtering
-grep "#" $pindvcf > $pindvcf_filt
-awk '/^I.*/ {split($10,tab,":"); split(tab[2],ad,","); if(ad[2]>=30 && match(tab[1],/[01]\/1/) && $7=="PASS" && (($1=="III" && ($2>23139 || $2<2440994)) || ($1=="I" && ($2>7618 || $2<5569804)) || ($1=="II" && $2<4532901))) print $0}' $pindvcf >> $pindvcf_filt
+#grep "#" $pindvcf > $pindvcf_filt
+#awk '/^I.*/ {split($10,tab,":"); split(tab[2],ad,","); if(ad[2]>=30 && match(tab[1],/[01]\/1/) && $7=="PASS" && (($1=="III" && ($2>23139 || $2<2440994)) || ($1=="I" && ($2>7618 || $2<5569804)) || ($1=="II" && $2<4532901))) print $0}' $pindvcf >> $pindvcf_filt
+
+grep "#" $pindvcf > dum
+awk '/^I.*/ {split($10,tab,":"); split(tab[2],ad,","); if(($1=="III" && ($2>23139 || $2<2440994)) || ($1=="I" && ($2>7618 || $2<5569804)) || ($1=="II" && $2<4532901)) print $0}' $pindvcf >> dum && mv dum $pindvcf
 
 #subtraction
+if [ ! -f $pindvcfgz ]
+then
+        bgzip $pindvcf
+fi
+tabix -p vcf $pindvcfgz
 
-bgzip $pindvcf_filt
-tabix -p vcf $pindvcf_filtgz
+vcf-isec -f -c $pindvcfgz $comparepindel > $pindelsubtracted
 
-vcf-isec -f -c $pindvcf_filtgz $5 > $pindelsubtracted
-
-gunzip $pindvcf_filtgz
-rm $pindvcf_filtgz.tbi
+gunzip $pindvcfgz
+rm $pindvcfgz.tbi
 
 # division in subclasses
 grep "#" $pindelsubtracted > $pindvcf0
@@ -144,15 +152,16 @@ awk 'BEGIN {OFS = "\t"} !/^#.*/ {split($10,geno,":");split(geno[2],ad,","); if(a
 ### SOAPindel
 
 soapvcf=$TMP"/"$prefix"_soap.vcf"
-soapvcf_filt=$RESULTS"/"$prefix"_soap_filtered.vcf"
-soapvcf_filtgz=$soapvcf_filt.gz
+#soapvcf_filt=$RESULTS"/"$prefix"_soap_filtered.vcf"
+#soapvcf_filtgz=$soapvcf_filt.gz
+soapvcfgz=$soapvcf.gz
 soapsubtracted=$RESULTS"/"$prefix"_soap_subtracted.vcf"
 mappinglist=$TMP"/"$prefix"_mapping.list"
 readslist=$TMP"/"$prefix"_reads.list"
 searchprefix=$prefix
 
 #configuration
-ls /pasteur/projets/NGS-Dyngen/fastq_files/clean_files/*$searchprefix*.fastq > $readslist
+ls /pasteur/projets/NGS-Dyngen/fastq_files/clean_files/*/*$searchprefix*.fastq > $readslist
 echo -e "$sortedbamfile\t$insertmean\t$insertsd\t$readslength\tPAIR" > $mappinglist
 
 #detection
@@ -164,24 +173,31 @@ grep -hv "#" $TMP/result/*/*indel.vcf >> $soapvcf
 
 sed -i "s/^chr//g" $soapvcf
 
-
 #filtering
-grep "##" $soapvcf > $soapvcf_filt
-grep "#CHR" $soapvcf >> $soapvcf_filt
-grep -P "^[I].*PASS.*1/1" $soapvcf | awk '{split($8,tab,";"); split(tab[1],tab2,"="); if (tab2[2]>=30 && (($1=="III" && ($2>23139 || $2<2440994)) || ($1=="I" && ($2>7618 || $2<5569804)) || ($1=="II" && $2<4532901))) print $0}' >> $soapvcf_filt
+#grep "##" $soapvcf > $soapvcf_filt
+#grep "#CHR" $soapvcf >> $soapvcf_filt
+#grep -P "^[I].*PASS.*1/1" $soapvcf | awk '{split($8,tab,";"); split(tab[1],tab2,"="); if (tab2[2]>=30 && (($1=="III" && ($2>23139 || $2<2440994)) || ($1=="I" && ($2>7618 || $2<5569804)) || ($1=="II" && $2<4532901))) print $0}' >> $soapvcf_filt
 
-bgzip $soapvcf_filt
-tabix -p vcf $soapvcf_filtgz
+grep "##" $soapvcf > dum
+grep "#CHR" $soapvcf >> dum
+grep -P "^[I].*PASS.*1/1" $soapvcf | awk '{split($8,tab,";"); split(tab[1],tab2,"="); if (($1=="III" && ($2>23139 || $2<2440994)) || ($1=="I" && ($2>7618 || $2<5569804)) || ($1=="II" && $2<4532901)) print $0}' >> dum && mv dum $soapvcf
 
-vcf-isec -f -c $soapvcf_filtgz $6 > $soapsubtracted
+if [ ! -f $soapvcfgz ]
+then
+        bgzip $soapvcf
+fi
+tabix -p vcf $soapvcfgz
 
-gunzip $soapvcf_filtgz
-rm $soapvcf_filtgz.tbi
+vcf-isec -f -c $soapvcfgz $comparesoap > $soapsubtracted
+
+gunzip $soapvcfgz
+rm $soapvcfgz.tbi
 
 ### PRISM (doit être lancé pour chaque chromosome)
 prismvcf=$TMP"/"$prefix"_prism_unfilt.vcf"
-prismvcf_filt=$RESULTS"/"$prefix"_prism_filtered.vcf"
-prismvcf_filtgz=$prismvcf_filt.gz
+#prismvcf_filt=$RESULTS"/"$prefix"_prism_filtered.vcf"
+#prismvcf_filtgz=$prismvcf_filt.gz
+prismvcfgz=$prismvcf.gz
 prismsubtracted=$RESULTS"/"$prefix"_prism_subtracted.vcf"
 refdir=$reference".DB.SPLIT/*"
 
@@ -193,19 +209,20 @@ for i in $refdir; do chrname=`basename ${i%.*}`; awk '{ if ($6>=5) print $0 }' $
 
 #conversion
 for i in $refdir; do chrname=`basename ${i%.*}`; out=$TMP"/"$prefix"_"$chrname"_prism.vcf"; prism2vcf.py $TMP"/"$chrname"/split_all.sam_ns_rmmul_cigar_sorted_sv_supported" $reference $out; done
-cat $TMP"/"*prism.vcf | awk '{printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",$1, $2, $3, $4, $5, $6, $7, $8)}' > $prismvcf
 
-echo -e "##fileformat=VCFv4.0\n####fileDate=20140724\n####source=prism\n##INFO=<ID=DP,Number=1,Type=Integer,Description="Total number of reads in haplotype window">\n##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">\n##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">\n###ALT=<ID=ALTER,Description="Alter">\n###FILTER=<ID=q10,Description="Quality below 10">\n###FILTER=<ID=hp10,Description="Reference homopolymer length was longer than 10">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" > $prismvcf_filt
+echo -e "##fileformat=VCFv4.0\n####fileDate=20140724\n####source=prism\n##INFO=<ID=DP,Number=1,Type=Integer,Description="Total number of reads in haplotype window">\n##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">\n##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">\n###ALT=<ID=ALTER,Description="Alter">\n###FILTER=<ID=q10,Description="Quality below 10">\n###FILTER=<ID=hp10,Description="Reference homopolymer length was longer than 10">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" > $prismvcf
+cat $TMP"/"*prism.vcf | awk '{printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",$1, $2, $3, $4, $5, $6, $7, $8)}' | awk '/^I.*/ {split($8,geno,";");split(geno[1],ad,"="); if (($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' >> $prismvcf
 
-awk '/^I.*/ {split($8,geno,";");split(geno[1],ad,"="); if (ad[2]<25 || ($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' $prismvcf >> $prismvcf_filt
+if [ ! -f $prismvcfgz ]
+then
+        bgzip $prismvcf
+fi
+tabix -p vcf $prismvcfgz
 
-bgzip $prismvcf_filt
-tabix -p vcf $prismvcf_filtgz
+vcf-isec -f -c $prismvcfgz $compareprism > $prismsubtracted
 
-vcf-isec -f -c $prismvcf_filtgz $7 > $prismsubtracted
-
-gunzip $prismvcf_filtgz
-rm $prismvcf_filtgz.tbi
+gunzip $prismvcfgz
+rm $prismvcfgz.tbi
 
 ###############
 # COMPARAISON #
@@ -216,7 +233,7 @@ minus=$RESULTS"/"$prefix"_pindel_soap_prism_minusPB1623.vcf"
 mpil="/pasteur/projets/NGS-Dyngen/snps/PB1623/G21-1623-1/tmp/G21-1623-1.mpileup"
 
 #joinx vcf-merge -e -s $pindelsubtracted $soapsubtracted $prismsubtracted > $minus
-combinevcf.py $pindelsubtracted $soapsubtracted $prismsubtracted $mpil $fusion > $minus
+combinevcf.py $pindelsubtracted $soapsubtracted $prismsubtracted $mpil $minus > $fusion
 
 
 ##############
@@ -225,6 +242,6 @@ combinevcf.py $pindelsubtracted $soapsubtracted $prismsubtracted $mpil $fusion >
 
 annot=$RESULTS"/"$prefix"_pindel_soap_prism_minusPB1623_annotated.txt"
 echo "snpEff -c $4 -o txt -no-downstream -no-upstream spombe $minus > $annot"
-snpEff -c $4 -o txt -no-downstream -no-upstream spombe $minus > $annot
+snpEff -c $3 -o txt -no-downstream -no-upstream spombe $minus > $annot
 
 
