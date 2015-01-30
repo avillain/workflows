@@ -21,7 +21,7 @@ module load snpEff/3.5
 # PRECONFIGURATION #
 ####################
 
-#qsub script.sh file.sam reference.fa unionPB1623.vcf snpEff.config PB1623_pindel.vcf.gz PB1623_soap.vcf.gz PB1623_prism.vcf.gz
+#qsub script.sh file.sam reference.fa snpEff.config PB1623_pindel.vcf.gz PB1623_soap.vcf.gz PB1623_prism.vcf.gz
 
 #### $1 : samfile.sam $2 : reference.fa $3 : snpeff.config $4 : comparepindel.vcf.gz $5 : comparesoap.vcf.gz  6 : compareprism.vcf.gz
 
@@ -47,7 +47,6 @@ sortedbamfile=$sortedbam.bam
 bamindex=$sortedbamfile.bai
 reference=$TMP"/"`basename $2`
 refindex=$reference.fai
-compare=$TMP"/"`basename $3`
 
 comparepindel=$4
 comparesoap=$5

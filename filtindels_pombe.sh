@@ -61,7 +61,7 @@ grep -P "^[I].*PASS.*1/1" $soapsubtracted | awk -v cov=$coverage '{split($8,tab,
 prismvcf_filt=$RESULTS"/"$prefix"_prism_filtered.vcf"
 prismsubtracted=$RESULTS"/"$prefix"_prism_subtracted.vcf"
 
-awk -v cov=$coverage '/^I.*/ {split($8,geno,";");split(geno[1],ad,"="); if (ad[2]<cov || ($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' $prismsubtracted >> $prismvcf_filt
+awk -v cov=$coverage '/^I.*/ {split($8,geno,";");split(geno[1],ad,"="); if (ad[2]<cov || ($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' $prismsubtracted > $prismvcf_filt
 
 echo -e "##fileformat=VCFv4.0\n####fileDate=20140724\n####source=prism\n##INFO=<ID=DP,Number=1,Type=Integer,Description="Total number of reads in haplotype window">\n##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">\n##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">\n###ALT=<ID=ALTER,Description="Alter">\n###FILTER=<ID=q10,Description="Quality below 10">\n###FILTER=<ID=hp10,Description="Reference homopolymer length was longer than 10">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" | cat - $prismvcf_filt > dum && mv dum $prismvcf_filt
 
