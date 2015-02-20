@@ -120,7 +120,8 @@ pindel2vcf -p $pindout -r $reference -R spombe -d 09052011 -v $pindvcf
 #awk '/^I.*/ {split($10,tab,":"); split(tab[2],ad,","); if(ad[2]>=30 && match(tab[1],/[01]\/1/) && $7=="PASS" && (($1=="III" && ($2>23139 || $2<2440994)) || ($1=="I" && ($2>7618 || $2<5569804)) || ($1=="II" && $2<4532901))) print $0}' $pindvcf >> $pindvcf_filt
 
 grep "#" $pindvcf > dum
-awk '/^I.*/ {split($10,tab,":"); split(tab[2],ad,","); if(($1=="III" && ($2>23139 || $2<2440994)) || ($1=="I" && ($2>7618 || $2<5569804)) || ($1=="II" && $2<4532901)) print $0}' $pindvcf >> dum && mv dum $pindvcf
+awk '/^I.*/ {if(($1=="III" && ($2>23139 && $2<2440994)) || ($1=="I" && ($2>7618 && $2<5569804)) || ($1=="II" && $2<4532901)) print $0}' $pindvcf >> dum
+mv dum $pindvcf
 
 #subtraction
 if [ ! -f $pindvcfgz ]
@@ -179,7 +180,8 @@ sed -i "s/^chr//g" $soapvcf
 
 grep "##" $soapvcf > dum
 grep "#CHR" $soapvcf >> dum
-grep -P "^[I].*PASS.*1/1" $soapvcf | awk '{split($8,tab,";"); split(tab[1],tab2,"="); if (($1=="III" && ($2>23139 || $2<2440994)) || ($1=="I" && ($2>7618 || $2<5569804)) || ($1=="II" && $2<4532901)) print $0}' >> dum && mv dum $soapvcf
+grep -P "^[I].*@PASS.*1/1" $soapvcf | awk '{if (($1=="III" && ($2>23139 && $2<2440994)) || ($1=="I" && ($2>7618 && $2<5569804)) || ($1=="II" && $2<4532901)) print $0}' >> dum
+mv dum $soapvcf
 
 if [ ! -f $soapvcfgz ]
 then
@@ -210,7 +212,7 @@ for i in $refdir; do chrname=`basename ${i%.*}`; awk '{ if ($6>=5) print $0 }' $
 for i in $refdir; do chrname=`basename ${i%.*}`; out=$TMP"/"$prefix"_"$chrname"_prism.vcf"; prism2vcf.py $TMP"/"$chrname"/split_all.sam_ns_rmmul_cigar_sorted_sv_supported" $reference $out; done
 
 echo -e "##fileformat=VCFv4.0\n####fileDate=20140724\n####source=prism\n##INFO=<ID=DP,Number=1,Type=Integer,Description="Total number of reads in haplotype window">\n##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">\n##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">\n###ALT=<ID=ALTER,Description="Alter">\n###FILTER=<ID=q10,Description="Quality below 10">\n###FILTER=<ID=hp10,Description="Reference homopolymer length was longer than 10">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" > $prismvcf
-cat $TMP"/"*prism.vcf | awk '{printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",$1, $2, $3, $4, $5, $6, $7, $8)}' | awk '/^I.*/ {split($8,geno,";");split(geno[1],ad,"="); if (($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' >> $prismvcf
+cat $TMP"/"*prism.vcf | awk '{printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",$1, $2, $3, $4, $5, $6, $7, $8)}' | awk '/^I.*/ {if (($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' >> $prismvcf
 
 if [ ! -f $prismvcfgz ]
 then
