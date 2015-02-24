@@ -181,7 +181,7 @@ sed -i "s/^chr//g" $soapvcf
 
 grep "##" $soapvcf > dum
 grep "#CHR" $soapvcf >> dum
-grep -P "^[I].*@PASS.*1/1" $soapvcf | awk '{if (($1=="III" && ($2>23139 && $2<2440994)) || ($1=="I" && ($2>7618 && $2<5569804)) || ($1=="II" && $2<4532901)) print $0}' >> dum
+awk '/^I.*/ {if (($1=="III" && ($2>23139 && $2<2440994)) || ($1=="I" && ($2>7618 && $2<5569804)) || ($1=="II" && $2<4532901)) print $0}' $soapvcf >> dum
 mv dum $soapvcf
 
 if [ ! -f $soapvcfgz ]

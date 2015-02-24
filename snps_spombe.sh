@@ -154,6 +154,7 @@ echo "[info] versions : bwa/0.7.5a GenomeAnalysisTK/2.7-2 snpEff/3.5"
 module load bwa/0.7.5a
 module load GenomeAnalysisTK/2.7-2
 module load snpEff/3.5
+module load R/3.1.2 #ggplot2 must be installed and coverage_graphe.R in the path
 
 #Index reference genome
 fai=$TMP"/"$REFERENCE".fai"
@@ -215,6 +216,8 @@ echo '[info] get mapping statistics'
 echo "[cmd] samtools flagstat $outputbam"
 samtools flagstat $outputbam
 
+samtools view -q 1 $outputbam > dum
+mv dum $outputbam
 
 ##Mark Duplicates
 echo '[cmd] MarkDuplicates INPUT=$outputbam OUTPUT=$dedupbam M=$metrics'
@@ -237,10 +240,14 @@ covplot=$TMP"/"$PREFIX"_coverage.jpeg"
 
 #adjust coverage limit for snp filtering
 echo "[info] adjusting coverage limit for snp filtering"
-echo '[cmd] samtools mpileup -f $refgenome $realignedbam > $pileup'
+echo "[cmd] samtools mpileup -f $refgenome $realignedbam > $pileup"
 #echo '[cmd] cov=`awk '{ total += $4;count++ } END {print total/count}' $pileup`'
 #echo '[cmd] res=$(echo "$cov / 2" |bc )'
 samtools mpileup -f $refgenome $realignedbam > $pileup 
+
+echo "[cmd] coverage_graphe.R $pileup"
+coverage_graphe.R $pileup
+
 #cov=`awk '{ total += $4;count++ } END {print total/count}' $pileup`
 #res=$(echo "$cov / 2" |bc )
 res=15
