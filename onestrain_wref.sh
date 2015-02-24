@@ -249,13 +249,13 @@ res=$(echo "$cov / 2" |bc )
 echo "[info] plot mapping coverage along genome"
 #echo "[cmd] cat $pileup | cut -f 2,4 > $cover | awk + gnuplot magic"
 
-cat $pileup | cut -f 2,4 > $cover
+#cat $pileup | cut -f 2,4 > $cover
 
-awk 'BEGIN { OFS = "\t" } ;($1-p2)>1{
-for(i=p2+1;i<$1;i++)
-print i,0
-}
-{p2=$1}1' $cover | gnuplot -e "set term jpeg ; set output '$covplot' ; set ylabel 'Position on genome' ; set xlabel 'Coverage' ;  set style data linespoints ; set title 'Coverage along reference' ; set key reverse Left outside ; set grid ; plot '<cat' using 1:2 lt 1 lw 2 smooth bezier title '$PREFIX'"
+#awk 'BEGIN { OFS = "\t" } ;($1-p2)>1{
+#for(i=p2+1;i<$1;i++)
+#print i,0
+#}
+#{p2=$1}1' $cover | gnuplot -e "set term jpeg ; set output '$covplot' ; set ylabel 'Position on genome' ; set xlabel 'Coverage' ;  set style data linespoints ; set title 'Coverage along reference' ; set key reverse Left outside ; set grid ; plot '<cat' using 1:2 lt 1 lw 2 smooth bezier title '$PREFIX'"
 
 
 #Calling

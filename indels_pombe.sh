@@ -161,7 +161,8 @@ readslist=$TMP"/"$prefix"_reads.list"
 searchprefix=$prefix
 
 #configuration
-ls /pasteur/projets/NGS-Dyngen/fastq_files/clean_files/*/*$searchprefix*.fastq > $readslist
+files=$(printf "/pasteur/projets/NGS-Dyngen/fastq_files/clean_files/*/*%s_*.fastq" $searchprefix)
+ls $files > $readslist
 echo -e "$sortedbamfile\t$insertmean\t$insertsd\t$readslength\tPAIR" > $mappinglist
 
 #detection
