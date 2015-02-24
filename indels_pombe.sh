@@ -232,7 +232,7 @@ rm $prismvcfgz.tbi
 
 fusion=$RESULTS"/"$prefix"_pindel_soap_prism_fusionPB1623.vcf"
 minus=$RESULTS"/"$prefix"_pindel_soap_prism_minusPB1623.vcf"
-mpil="/pasteur/projets/NGS-Dyngen/snps/PB1623/G21-1623-1/tmp/G21-1623-1.mpileup"
+mpil="/pasteur/projets/NGS-Dyngen/references/PB1623/PB1623-2.mpileup"
 
 #joinx vcf-merge -e -s $pindelsubtracted $soapsubtracted $prismsubtracted > $minus
 combinevcf.py $pindelsubtracted $soapsubtracted $prismsubtracted $mpil $minus > $fusion
