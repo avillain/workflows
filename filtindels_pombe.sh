@@ -55,7 +55,7 @@ soapsubtracted=$RESULTS"/"$prefix"_soap_subtracted.vcf"
 #filtering
 grep "##" $soapsubtracted > $soapvcf_filt
 grep "#CHR" $soapsubtracted >> $soapvcf_filt
-grep -P "^[I].*PASS.*1/1" $soapsubtracted | awk -v cov=$coverage '{split($8,tab,";"); split(tab[1],tab2,"="); if (tab2[2]>=cov && (($1=="III" && ($2>23139 && $2<2440994)) || ($1=="I" && ($2>7618 && $2<5569804)) || ($1=="II" && $2<4532901))) print $0}' >> $soapvcf_filt
+awk -v cov=$coverage '/^I.*/ {split($8,tab,";"); split(tab[1],tab2,"="); if (tab2[2]>=cov && (($1=="III" && ($2>23139 && $2<2440994)) || ($1=="I" && ($2>7618 && $2<5569804)) || ($1=="II" && $2<4532901))) print $0}' $soapsubtracted >> $soapvcf_filt
 
 ### PRISM (doit être lancé pour chaque chromosome)
 prismvcf_filt=$RESULTS"/"$prefix"_prism_filtered.vcf"
