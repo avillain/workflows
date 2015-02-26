@@ -50,7 +50,7 @@ step = 1000
 ploidy = 1
 #breakPointThreshold = -.001
 
-telocentromeric = 30000
+telocentromeric = 10000
 
 GCcontentProfile = GC_profile.cnp
 
