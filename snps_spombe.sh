@@ -133,6 +133,7 @@ fi
 outputsam=$TMP"/"$PREFIX".sam"
 fixedsam=$TMP"/"$PREFIX"_fixed.sam"
 outputbam=$TMP"/"$PREFIX".bam"
+bam_sorted=$TMP"/"$PREFIX"_sorted"
 dedupbam=$TMP"/dedup_"$PREFIX".bam"
 dictname=$RESULTS"/"$refname".dict"
 metrics=$TMP"/"$refname".metrics"
@@ -211,17 +212,19 @@ echo '[cmd] FixMateInformation INPUT=$outputsam OUTPUT=$fixedsam'
 FixMateInformation INPUT=$outputsam OUTPUT=$fixedsam
 
 #echo '[cmd] SortSam INPUT=$outputsam OUTPUT=$outputbam SORT_ORDER="coordinate"'
-SortSam INPUT=$fixedsam OUTPUT=$outputbam SORT_ORDER="coordinate" 
-echo '[info] get mapping statistics'
-echo "[cmd] samtools flagstat $outputbam"
-samtools flagstat $outputbam
+#SortSam INPUT=$fixedsam OUTPUT=$outputbam SORT_ORDER="coordinate" 
+#echo '[info] get mapping statistics'
 
-samtools view -q 1 $outputbam > dum
-mv dum $outputbam
+samtools view -bS -q 1 $outputsam > $outputbam
+
+samtools sort $outputbam $bam_sorted
+
+echo "[cmd] samtools flagstat $bam_sorted.bam"
+samtools flagstat $bam_sorted.bam
 
 ##Mark Duplicates
 echo '[cmd] MarkDuplicates INPUT=$outputbam OUTPUT=$dedupbam M=$metrics'
-MarkDuplicates INPUT=$outputbam OUTPUT=$dedupbam M=$metrics 
+MarkDuplicates INPUT=$bam_sorted.bam OUTPUT=$dedupbam M=$metrics 
 
 echo '[cmd] BuildBamIndex INPUT=$dedupbam'
 BuildBamIndex INPUT=$dedupbam 
