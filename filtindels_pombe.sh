@@ -23,12 +23,12 @@ coverage=$3
 ### Pindel
 
 pindelsubtracted=$RESULTS"/"$prefix"_pindel_subtracted.vcf"
-pindvcf_filt=$RESULTS"/"$prefix"_pindel_filtered.vcf"
+pindvcf_filt=$RESULTS"/"$prefix"_pindel_filtered"$coverage".vcf"
 
-pindvcf0=$RESULTS"/"$prefix"_pindel_filt0.vcf"
-pindvcf25=$RESULTS"/"$prefix"_pindel_filt25.vcf"
-pindvcf50=$RESULTS"/"$prefix"_pindel_filt50.vcf"
-pindvcf100=$RESULTS"/"$prefix"_pindel_filt100.vcf"
+pindvcf0=$RESULTS"/"$prefix"_pindel_filt0_cov"$coverage".vcf"
+pindvcf25=$RESULTS"/"$prefix"_pindel_filt25_cov"$coverage".vcf"
+pindvcf50=$RESULTS"/"$prefix"_pindel_filt50_cov"$coverage".vcf"
+pindvcf100=$RESULTS"/"$prefix"_pindel_filt100_cov"$coverage".vcf"
 
 #filtering
 grep "#" $pindelsubtracted > $pindvcf_filt
@@ -49,19 +49,19 @@ awk 'BEGIN {OFS = "\t"} !/^#.*/ {split($10,geno,":");split(geno[2],ad,","); if(a
 
 ### SOAPindel
 
-soapvcf_filt=$RESULTS"/"$prefix"_soap_filtered.vcf"
+soapvcf_filt=$RESULTS"/"$prefix"_soap_filtered"$coverage".vcf"
 soapsubtracted=$RESULTS"/"$prefix"_soap_subtracted.vcf"
 
 #filtering
 grep "##" $soapsubtracted > $soapvcf_filt
 grep "#CHR" $soapsubtracted >> $soapvcf_filt
-awk -v cov=$coverage '/^I.*/ {split($8,tab,";"); split(tab[1],tab2,"="); if (tab2[2]>=cov && (($1=="III" && ($2>23139 && $2<2440994)) || ($1=="I" && ($2>7618 && $2<5569804)) || ($1=="II" && $2<4532901))) print $0}' $soapsubtracted >> $soapvcf_filt
+awk -v cov=$coverage '/^I.*/ {split($8,tab,";"); split(tab[1],tab2,"="); if (tab2[2]>=cov && $7=="PASS" && (($1=="III" && ($2>23139 && $2<2440994)) || ($1=="I" && ($2>7618 && $2<5569804)) || ($1=="II" && $2<4532901))) print $0}' $soapsubtracted >> $soapvcf_filt
 
 ### PRISM (doit être lancé pour chaque chromosome)
-prismvcf_filt=$RESULTS"/"$prefix"_prism_filtered.vcf"
+prismvcf_filt=$RESULTS"/"$prefix"_prism_filtered"$coverage".vcf"
 prismsubtracted=$RESULTS"/"$prefix"_prism_subtracted.vcf"
 
-awk -v cov=$coverage '/^I.*/ {split($8,geno,";");split(geno[1],ad,"="); if (ad[2]<cov || ($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' $prismsubtracted > $prismvcf_filt
+awk -v cov=$coverage '/^I.*/ {split($8,geno,";");split(geno[1],ad,"="); if (ad[2]<cov || $7!="PASS" || ($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' $prismsubtracted > $prismvcf_filt
 
 echo -e "##fileformat=VCFv4.0\n####fileDate=20140724\n####source=prism\n##INFO=<ID=DP,Number=1,Type=Integer,Description="Total number of reads in haplotype window">\n##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">\n##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">\n###ALT=<ID=ALTER,Description="Alter">\n###FILTER=<ID=q10,Description="Quality below 10">\n###FILTER=<ID=hp10,Description="Reference homopolymer length was longer than 10">\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO" | cat - $prismvcf_filt > dum && mv dum $prismvcf_filt
 

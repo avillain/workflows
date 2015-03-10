@@ -8,20 +8,22 @@ usage: $0 options
 This script run the SNP and Indels analysis for one genome using fqCleaner for reads pre-processing (optional), bwa mem for reads mapping, GATK2 for variant calling, and snpEff for variant annotation (optional)
 
 OPTIONS:
-   -h      Show this message
-   -i      Input reads (.fastq format)
-   -j	   Input mate reads (.fastq format)
-   -r      Reference genome (.fasta format)
-   -p      Output files prefix
-   -n      No quality control performed
-   -a      Annotation of variants with SnpEff (see -c and -d options)
-   -c	   SnpEff config file (mandatory if -a)
-   -d      SnpEff database ID of the species  (mandatory if -a)
-   -s	   Subtract SNPs and indels also found in control
-   -v      Verbose
+   -h			Show this message
+   -i f1.fq		Input reads (.fastq format)
+   -j f2.fq		Input mate reads (.fastq format)
+   -r ref.fa		Reference genome (.fasta format)
+   -p out		Output files prefix
+   -n			No quality control performed
+   -a			Annotation of variants with SnpEff (see -c and -d options)
+   -c snpeff.txt	SnpEff config file (mandatory if -a)
+   -d orgID		SnpEff database ID of the species  (mandatory if -a)
+   -C 40		Set minimum coverage to value x (default : 10)
+   -s			Subtract SNPs and indels also found in control
+   -g			Draw coverage graphe (requires coverage_graphe.R in \$PATH)
+   -v      		Verbose
 
 EXAMPLE:
-./script.sh -i reads1.fq -j reads2.fq -r ref.fasta -p prefix -n -a -c SNPeffconfig1.txt -d spombe
+./script.sh -i reads1.fq -j reads2.fq -r ref.fasta -p prefix -n -a -c SNPeffconfig1.txt -d spombe -C 15 -s -g
 EOF
 }
 
@@ -32,9 +34,11 @@ VERBOSE=
 NOQC=
 ANNOT=
 CONF=
+COV=
 ID=
 SUB=
-while getopts “hi:j:r:o:p:c:d:vnas” OPTION
+GRAPHE=
+while getopts “hi:j:r:o:p:c:d:C:vnasg” OPTION
 do
      case $OPTION in
          h)
@@ -56,6 +60,9 @@ do
          c)
              CONF=$OPTARG
              ;;
+	 C)
+	     COV=$OPTARG
+	     ;;
          d)
              ID=$OPTARG
              ;;
@@ -70,6 +77,9 @@ do
              ;;
 	 s)
 	     SUB=1
+	     ;;
+	 g)
+	     GRAPHE=1
 	     ;;
          ?)
              usage
@@ -244,16 +254,22 @@ covplot=$TMP"/"$PREFIX"_coverage.jpeg"
 #adjust coverage limit for snp filtering
 echo "[info] adjusting coverage limit for snp filtering"
 echo "[cmd] samtools mpileup -f $refgenome $realignedbam > $pileup"
-#echo '[cmd] cov=`awk '{ total += $4;count++ } END {print total/count}' $pileup`'
-#echo '[cmd] res=$(echo "$cov / 2" |bc )'
 samtools mpileup -f $refgenome $realignedbam > $pileup 
 
-echo "[cmd] coverage_graphe.R $pileup"
-coverage_graphe.R $pileup
-
+#echo '[cmd] cov=`awk '{ total += $4;count++ } END {print total/count}' $pileup`'
+#echo '[cmd] res=$(echo "$cov / 2" |bc )'
 #cov=`awk '{ total += $4;count++ } END {print total/count}' $pileup`
 #res=$(echo "$cov / 2" |bc )
-res=15
+
+if [[ -z $COV ]]
+then
+    res=$COV
+else
+    res=10
+fi
+
+echo "[info] Minimum coverage set to $res"
+
 #coverage plot
 #echo "[info] plot mapping coverage along genome"
 #echo "[cmd] cat $pileup | cut -f 2,4 > $cover | awk + gnuplot magic"
@@ -265,6 +281,12 @@ res=15
 #print i,0
 #}
 #{p2=$1}1' $cover | gnuplot -e "set term jpeg ; set output '$covplot' ; set ylabel 'Position on genome' ; set xlabel 'Coverage' ;  set style data linespoints ; set title 'Coverage along reference' ; set key reverse Left outside ; set grid ; plot '<cat' using 1:2 lt 1 lw 2 smooth bezier title '$PREFIX'"
+
+if [[ ! -z $GRAPHE ]]
+then
+    echo "[cmd] coverage_graphe.R $pileup"
+    coverage_graphe.R $pileup
+fi
 
 #Calling
 ##GATK

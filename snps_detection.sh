@@ -209,8 +209,9 @@ fi
 echo '[cmd] FixMateInformation INPUT=$outputsam OUTPUT=$fixedsam'
 FixMateInformation INPUT=$outputsam OUTPUT=$fixedsam
 
-echo '[cmd] SortSam INPUT=$outputsam OUTPUT=$outputbam SORT_ORDER="coordinate"'
-SortSam INPUT=$fixedsam OUTPUT=$outputbam SORT_ORDER="coordinate" 
+samtools view -bS -q 1 $outputsam > $outputbam
+
+samtools sort $outputbam $bam_sorted
 
 echo '[info] get mapping statistics'
 echo "[cmd] samtools flagstat $outputbam"
