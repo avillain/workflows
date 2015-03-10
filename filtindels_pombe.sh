@@ -69,8 +69,8 @@ echo -e "##fileformat=VCFv4.0\n####fileDate=20140724\n####source=prism\n##INFO=<
 # COMPARAISON #
 ###############
 
-fusion_filt=$RESULTS"/"$prefix"_pindel_soap_prism_fusion_filtered_minusPB1623.vcf"
-minus_filt=$RESULTS"/"$prefix"_pindel_soap_prism_filtered_minusPB1623.vcf"
+fusion_filt=$RESULTS"/"$prefix"_pindel_soap_prism_fusion_filtered"$coverage"_minusPB1623.vcf"
+minus_filt=$RESULTS"/"$prefix"_pindel_soap_prism_filtered"$coverage"_minusPB1623.vcf"
 mpil="/pasteur/projets/NGS-Dyngen/snps/PB1623/G21-1623-1/tmp/G21-1623-1.mpileup"
 
 #joinx vcf-merge -e -s $pindelsubtracted $soapsubtracted $prismsubtracted > $minus
@@ -80,7 +80,7 @@ combinevcf.py $pindvcf_filt $soapvcf_filt $prismvcf_filt $mpil $minus_filt > $fu
 # ANNOTATION #
 ##############
 
-annot_filt=$RESULTS"/"$prefix"_pindel_soap_prism_filtered_minusPB1623_annotated.txt"
+annot_filt=$RESULTS"/"$prefix"_pindel_soap_prism_filtered"$coverage"_minusPB1623_annotated.txt"
 snpEff -c $2 -o txt -no-downstream -no-upstream spombe $minus_filt > $annot_filt
 
 
