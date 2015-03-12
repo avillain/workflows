@@ -18,7 +18,8 @@ OPTIONS:
    -c snpeff.txt	SnpEff config file (mandatory if -a)
    -d orgID		SnpEff database ID of the species  (mandatory if -a)
    -C 40		Set minimum coverage to value x (default : 10)
-   -s			Subtract SNPs and indels also found in control
+   -S snp_control.vcf	Subtract SNPs also found in control
+   -I ind_control.vcf	Subtracts Indels also found in control
    -g			Draw coverage graphe (requires coverage_graphe.R in \$PATH)
    -v      		Verbose
 
@@ -36,9 +37,10 @@ ANNOT=
 CONF=
 COV=
 ID=
-SUB=
+SNPSUB=
+INDELSUB=
 GRAPHE=
-while getopts “hi:j:r:o:p:c:d:C:vnasg” OPTION
+while getopts “hi:j:r:o:p:c:d:C:S:I:vnag” OPTION
 do
      case $OPTION in
          h)
@@ -75,8 +77,11 @@ do
          a)
              ANNOT=1
              ;;
-	 s)
-	     SUB=1
+	 S)
+	     SNPSUB=$OPTARG
+	     ;;
+	 I)
+	     INDSUB=$OPTARG
 	     ;;
 	 g)
 	     GRAPHE=1
@@ -332,14 +337,14 @@ GenomeAnalysisTK -T SelectVariants -R $refgenome --variant $filteredindels_tmp -
 grep "#" $filteredallindels > $filteredindels
 awk '/^I.*/ { if (($1=="III" && ($2<=23139 || $2>=2440994)) || ($1=="I" && ($2<=7618 || $2>=5569804)) || ($1=="II" && $2>=4532901)); else print $0}' $filteredallindels >> $filteredindels
 
-if [[ ! -z $SUB ]]
+if [[ ! -z $SNPSUB ]] && [[ ! -z $INDSUB ]]
 then
 	echo "[info] substracting control SNPs and indels from results"
 	snpminus=$RESULTS"/"$PREFIX"snps_minus_union1623.vcf"
 	indelminus=$RESULTS"/"$PREFIX"indels_minus_union1623.vcf"
 	bgzip $filteredhetsnps
 	tabix -p vcf $filteredhetsnps.gz
-	vcf-isec -c $filteredhetsnps.gz /projets/NGS-Dyngen/snps/PB1623/union/PB1623snps_raw.vcf.gz > $snpminus
+	vcf-isec -c $filteredhetsnps.gz $SNPSUB > $snpminus
 	gunzip $filteredhetsnps.gz
 	rm $filteredhetsnps.gz.tbi
 	bgzip $filteredindels
@@ -351,6 +356,7 @@ then
 	tmpvar=$TMP"/allvariants_minus1623_tmp.vcf"
 	snpeffannotated=$RESULTS"/"$PREFIX"allvariants_annotated_minus_union1623.vcf"
 else
+	echo "[info] no substraction of control SNPs and indels from results"
 	snpminus=$filteredhetsnps
 	indelminus=$filteredindels
 	allvariants=$RESULTS"/"$PREFIX"allvariants_filtered.vcf"

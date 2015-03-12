@@ -86,4 +86,6 @@ fi
 #freec
 freec -conf $config
 
-cat /pasteur/homes/avillain/scripts/processing/makeGraph.R | R --slave --args 1 $RESULTS"/"`basename $bamfile`"_ratio.txt"
+cat /pasteur/homes/avillain/scripts/processing/makeGraph_spombe1.sh | R --slave --args 1 $RESULTS"/"`basename $bamfile`"_I_II_III_ratio.txt"
+cat /pasteur/homes/avillain/scripts/processing/makeGraph_spombe2.sh | R --slave --args 1 $RESULTS"/"`basename $bamfile`"_MT_MTR_AB_ratio.txt"
+
