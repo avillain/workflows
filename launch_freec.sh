@@ -12,6 +12,7 @@
 
 module load samtools
 module load freec
+module load R
 
 ####################
 # PRECONFIGURATION #
