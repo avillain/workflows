@@ -7,7 +7,7 @@ PREFIX=$1
 TMP="./tmp"
 RESULTS="./results"
 
-COV=$2
+res=$2
 
 refgenome=$3
 
@@ -24,13 +24,6 @@ fi
 SNPSUB=$4
 
 INDSUB=$5
-
-if [[ -z $COV ]]
-then
-    res=$COV
-else
-    res=10
-fi
 
 echo "[info] Minimum coverage set to $res"
 
