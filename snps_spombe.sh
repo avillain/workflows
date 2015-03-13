@@ -349,7 +349,7 @@ then
 	rm $filteredhetsnps.gz.tbi
 	bgzip $filteredindels
 	tabix -p vcf $filteredindels.gz
-	vcf-isec -c $filteredindels.gz /pasteur/projets/NGS-Dyngen/snps/PB1623/union/PB1623indels_raw.vcf.gz > $indelminus
+	vcf-isec -c $filteredindels.gz $INDSUB > $indelminus
 	gunzip $filteredindels.gz
 	rm $filteredindels.gz.tbi
 	allvariants=$RESULTS"/"$PREFIX"allvariants_filtered_minus_union1623.vcf"
