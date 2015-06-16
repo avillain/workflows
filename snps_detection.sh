@@ -128,7 +128,8 @@ fi
 outputsam=$TMP"/"$PREFIX".sam"
 fixedsam=$TMP"/"$PREFIX"_fixed.sam"
 outputbam=$TMP"/"$PREFIX".bam"
-bamsorted=$TMP"/"$PREFIX"_sorted"
+bamsorted_prefix=$TMP"/"$PREFIX"_sorted"
+bamsorted=$TMP"/"$PREFIX"_sorted.bam"
 dedupbam=$TMP"/dedup_"$PREFIX".bam"
 dictname=$RESULTS"/"$refname".dict"
 metrics=$TMP"/"$refname".metrics"
@@ -212,7 +213,7 @@ FixMateInformation INPUT=$outputsam OUTPUT=$fixedsam
 
 samtools view -bS -q 1 $fixedsam > $outputbam
 
-samtools sort $outputbam $bamsorted
+samtools sort $outputbam $bamsorted_prefix
 
 echo '[info] get mapping statistics'
 echo "[cmd] samtools flagstat $outputbam"
