@@ -293,7 +293,7 @@ grep -v '#' "$filteredcovsnps" | awk '{split($10,geno,":");split(geno[2],ad,",")
 ###Indels
 rawindels=$TMP"/"$PREFIX"_indels_raw.vcf"
 filteredindels=$RESULTS"/"$PREFIX"indels_filtered.vcf"
-iltindel="QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"
+filtindel="QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"
 GenomeAnalysisTK -T SelectVariants -R $refgenome -V $rawvariants -selectType INDEL -o $rawindels 
 GenomeAnalysisTK -T VariantFiltration -R $refgenome -V $rawindels --filterExpression "$filtindel" --filterName "base" -o $filteredindels 
 
